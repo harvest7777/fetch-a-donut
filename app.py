@@ -24,7 +24,10 @@ from config import (
     ASI_ONE_BASE_URL,
     ASI_ONE_MAX_TOKENS,
     ASI_ONE_MODEL,
+    CONFERENCE_END_DATE,
     CONFERENCE_ID,
+    CONFERENCE_NAME,
+    CONFERENCE_START_DATE,
     COUPON_PREFIX,
     MIN_STORY_LENGTH,
 )
@@ -51,15 +54,16 @@ protocol = Protocol(spec=chat_protocol_spec)
 # --- Helpers ---
 
 WELCOME_MESSAGE = (
-    "Welcome to Fetch-a-Donut! I'm your friendly donut fairy!\n\n"
-    "Before I can grant you a magical donut coupon, I need to hear your "
-    "most epic donut story! Tell me about:\n\n"
-    "- Your craziest donut adventure\n"
-    "- Your dream donut combination\n"
-    "- A time a donut saved your day\n"
-    "- Or any donut-related tale!\n\n"
-    "The more creative and fun your story, the better your rating! "
-    "Go ahead, share your story now."
+    f"Welcome to Fetch-a-Donut at {CONFERENCE_NAME}! "
+    f"I'm your friendly donut fairy!\n\n"
+    f"Before I can grant you a magical donut coupon, I need to hear your "
+    f"most epic donut story! Tell me about:\n\n"
+    f"- Your craziest donut adventure\n"
+    f"- Your dream donut combination\n"
+    f"- A time a donut saved your day\n"
+    f"- Or any donut-related tale!\n\n"
+    f"The more creative and fun your story, the better your rating! "
+    f"Go ahead, share your story now."
 )
 
 
@@ -155,7 +159,7 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
             _make_chat(
                 f"You've already received your donut coupon this session!\n\n"
                 f"Your coupon code: {coupon}\n\n"
-                f"Show this code to any food vendor to claim your free donut.",
+                f"Show this code to any food vendor at {CONFERENCE_NAME} to claim your free donut.",
                 end_session=True,
             ),
         )
@@ -195,7 +199,8 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
                 f"{comment}\n\n"
                 f"Your Coupon Code: {coupon}\n\n"
                 f"This gets you a FREE donut of your choice!\n"
-                f"Show this code to any food vendor at the conference.\n"
+                f"Show this code to any food vendor at {CONFERENCE_NAME} "
+                f"({CONFERENCE_START_DATE} - {CONFERENCE_END_DATE}).\n"
                 f"Story Rating: {score}/10",
                 end_session=True,
             ),
