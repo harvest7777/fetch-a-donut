@@ -1,0 +1,129 @@
+THis is a pizza agent that is very similar to what the donut agent is going to do, 
+here is additional information that may seem helpful to your prompt
+pizza-experiment
+🍕 Pizza Coupon Agent
+A fun, interactive agent that distributes pizza coupons to conference attendees through story-based engagement. Built for asi:one AgentVerse using the uAgents framework.
+
+🚀 Features
+Interactive Storytelling: Users share pizza stories to earn coupons
+Dynamic Coupon Tiers: Standard plan
+Anti-Abuse Protection: One coupon per user with session management
+Conference Integration: Configurable for different events
+Vendor-Friendly: Easy coupon validation for food vendors
+Production Ready: Comprehensive error handling and logging
+
+Quick Start
+1. Installation
+# Clone or download the agent files
+# Install dependencies
+pip install -r requirements.txt
+2. Configuration
+Edit config.py to customize for your conference:
+
+CONFERENCE_ID = "YOURCONF24"  # Change this
+CONFERENCE_NAME = "Your Conference 2024"
+CONFERENCE_START_DATE = "2024-12-01"
+CONFERENCE_END_DATE = "2024-12-03"
+3. Set AI Agent Address
+Update the AI_AGENT_ADDRESS in both config.py and agents.py with your OpenAI agent address for story evaluation.
+
+4. Run the Agent
+python agents.py
+5. Deploy to AgentVerse
+Upload your agent files to AgentVerse
+Register the agent with handle @fetch-pizza (or your chosen name)
+Make it discoverable on asi:one
+💬 User Experience
+Step 1: User tags the agent
+
+@fetch-pizza I want pizza!
+Step 2: Agent requests a story
+
+🍕 Welcome to Pizza Paradise! I'm your friendly pizza fairy! ✨
+
+Before I can grant you a magical pizza coupon, I need to hear your 
+most epic pizza story! Tell me about:
+• Your craziest pizza adventure
+• Your dream pizza combination  
+• A time pizza saved your day
+• Or any pizza-related tale!
+
+The more creative and fun your story, the better your coupon might be! 🎭
+Step 3: User shares story
+
+Once I was stuck in a snowstorm and the only place open was this tiny 
+pizza shop. The owner made me a custom pizza with ingredients from his 
+personal stash - best pizza of my life!
+Step 4: Agent evaluates and rewards
+
+😊 Great story! You've earned a solid coupon!
+
+🎫 Your Coupon Code: PIZZA-FETCH24-STANDARD-A7B2C3-1445
+
+🍕 This gets you a MEDIUM pizza with your choice of toppings!
+📱 Show this code to any food vendor at the conference
+⭐ Story Rating: 7/10 - Well done! 👍
+🏪 Vendor Integration
+For Food Vendors
+Coupon codes follow this format:
+
+PIZZA-[CONFERENCE]-[TIER]-[USER_HASH]-[TIME]
+Example: PIZZA-FETCH24-PREMIUM-A7B2C3-1445
+Validation Process:
+
+Check format is correct
+Verify conference ID matches your event
+Accept TIER levels: BASIC, STANDARD, PREMIUM
+Mark as redeemed to prevent reuse
+
+Validation Helper
+from functions import extract_coupon_info
+
+# Validate a coupon
+info = extract_coupon_info("PIZZA-FETCH24-PREMIUM-A7B2C3-1445")
+if info['valid']:
+    print(f"Valid {info['tier']} coupon for {info['pizza_size']} pizza")
+    print(f"Issued at: {info['time_issued']}")
+else:
+    print(f"Invalid coupon: {info['error']}")
+🔧 Configuration Options
+Basic Settings
+CONFERENCE_ID: Your event identifier
+AGENT_NAME: Agent handle (default: "fetch-pizza")
+MAX_REQUESTS_PER_USER: Prevent abuse (default: 1)
+Story Evaluation
+MIN_STORY_LENGTH: Minimum characters required
+STORY_EVALUATION_TIMEOUT: AI evaluation timeout
+FALLBACK_TO_RULE_BASED: Use backup evaluation if AI fails
+Time Restrictions
+ENABLE_TIME_RESTRICTIONS: Only allow during conference hours
+CONFERENCE_START_HOUR: Start time (24h format)
+CONFERENCE_END_HOUR: End time (24h format)
+Security
+ENABLE_SPAM_PROTECTION: Basic abuse prevention
+MAX_MESSAGE_LENGTH: Limit message size
+BLOCKED_WORDS: Filter inappropriate content
+
+
+Security Considerations
+Rate Limiting: One coupon per user prevents abuse
+Input Validation: Messages are length-limited and sanitized
+Time Restrictions: Optional conference-hours-only operation
+Coupon Format: Cryptographic hashes prevent guessing
+Session Management: Proper state tracking prevents race conditions
+🐛 Troubleshooting
+Agent not responding:
+
+Check agent address is correct
+Verify AI agent is running
+Check logs for errors
+Stories not being evaluated:
+
+Confirm AI_AGENT_ADDRESS is set
+Check network connectivity
+Verify story meets minimum length
+Coupons not generating:
+
+Check conference date settings
+Verify user hasn't already received coupon
+Review time restriction settings
