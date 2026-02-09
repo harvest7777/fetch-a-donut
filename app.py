@@ -4,8 +4,8 @@ import os
 from datetime import datetime, UTC
 from uuid import uuid4
 
+import requests
 from dotenv import load_dotenv
-from openai import OpenAI
 from uagents import Agent, Context, Protocol
 from uagents_core.contrib.protocols.chat import (
     ChatAcknowledgement,
@@ -35,10 +35,7 @@ load_dotenv()
 SEED_PHRASE = os.getenv("AGENT_SEED_PHRASE", "donut-agent-seed-phrase")
 AGENTVERSE_KEY = os.getenv("ILABS_AGENTVERSE_API_KEY")
 
-asi_client = OpenAI(
-    base_url=ASI_ONE_BASE_URL,
-    api_key=os.getenv("ASI_ONE_API_KEY"),
-)
+ASI_ONE_API_KEY = os.getenv("ASI_ONE_API_KEY")
 
 # --- Agent ---
 agent = Agent(
@@ -84,11 +81,15 @@ def _generate_coupon(sender: str) -> str:
 
 
 def _evaluate_story(story: str) -> dict:
-    """Use ASI:One to evaluate the donut story. Returns {"score": int, "comment": str}."""
+    """Use ASI:One mini to evaluate the donut story. Returns {"score": int, "comment": str}."""
     try:
-        response = asi_client.chat.completions.create(
-            model=ASI_ONE_MODEL,
-            messages=[
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {ASI_ONE_API_KEY}",
+        }
+        data = {
+            "model": ASI_ONE_MODEL,
+            "messages": [
                 {
                     "role": "system",
                     "content": (
@@ -100,9 +101,16 @@ def _evaluate_story(story: str) -> dict:
                 },
                 {"role": "user", "content": story},
             ],
-            max_tokens=ASI_ONE_MAX_TOKENS,
+            "max_tokens": ASI_ONE_MAX_TOKENS,
+        }
+        resp = requests.post(
+            f"{ASI_ONE_BASE_URL}/chat/completions",
+            headers=headers,
+            json=data,
+            timeout=30,
         )
-        raw = response.choices[0].message.content.strip()
+        resp.raise_for_status()
+        raw = resp.json()["choices"][0]["message"]["content"].strip()
         # Strip markdown code fences if present
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
