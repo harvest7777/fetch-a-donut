@@ -21,11 +21,12 @@ from uagents_core.utils.registration import (
 
 from config import (
     AGENT_NAME,
+    ASI_ONE_BASE_URL,
+    ASI_ONE_MAX_TOKENS,
+    ASI_ONE_MODEL,
     CONFERENCE_ID,
     COUPON_PREFIX,
     MIN_STORY_LENGTH,
-    OPENAI_MAX_TOKENS,
-    OPENAI_MODEL,
 )
 
 load_dotenv()
@@ -34,7 +35,10 @@ load_dotenv()
 SEED_PHRASE = os.getenv("AGENT_SEED_PHRASE", "donut-agent-seed-phrase")
 AGENTVERSE_KEY = os.getenv("ILABS_AGENTVERSE_API_KEY")
 
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+asi_client = OpenAI(
+    base_url=ASI_ONE_BASE_URL,
+    api_key=os.getenv("ASI_ONE_API_KEY"),
+)
 
 # --- Agent ---
 agent = Agent(
@@ -80,10 +84,10 @@ def _generate_coupon(sender: str) -> str:
 
 
 def _evaluate_story(story: str) -> dict:
-    """Use OpenAI to evaluate the donut story. Returns {"score": int, "comment": str}."""
+    """Use ASI:One to evaluate the donut story. Returns {"score": int, "comment": str}."""
     try:
-        response = openai_client.chat.completions.create(
-            model=OPENAI_MODEL,
+        response = asi_client.chat.completions.create(
+            model=ASI_ONE_MODEL,
             messages=[
                 {
                     "role": "system",
@@ -96,8 +100,7 @@ def _evaluate_story(story: str) -> dict:
                 },
                 {"role": "user", "content": story},
             ],
-            max_tokens=OPENAI_MAX_TOKENS,
-            temperature=0.7,
+            max_tokens=ASI_ONE_MAX_TOKENS,
         )
         raw = response.choices[0].message.content.strip()
         # Strip markdown code fences if present
@@ -163,7 +166,7 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
             )
             return
 
-        # Evaluate story with OpenAI
+        # Evaluate story with ASI:One
         ctx.logger.info(f"Evaluating donut story from {sender[:16]}...")
         result = _evaluate_story(text)
         score = result.get("score", 7)
@@ -221,7 +224,7 @@ A fun, interactive agent that distributes donut coupons through story-based enga
 
 ## Features
 
-- AI-powered story evaluation using OpenAI
+- AI-powered story evaluation using ASI:One
 - Unique coupon code generation
 - One coupon per session (anti-abuse)
 - Chat protocol support for asi:one
