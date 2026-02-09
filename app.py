@@ -4,8 +4,8 @@ import os
 from datetime import datetime, UTC
 from uuid import uuid4
 
+import requests
 from dotenv import load_dotenv
-from openai import OpenAI
 from uagents import Agent, Context, Protocol
 from uagents_core.contrib.protocols.chat import (
     ChatAcknowledgement,
@@ -21,11 +21,15 @@ from uagents_core.utils.registration import (
 
 from config import (
     AGENT_NAME,
+    ASI_ONE_BASE_URL,
+    ASI_ONE_MAX_TOKENS,
+    ASI_ONE_MODEL,
+    CONFERENCE_END_DATE,
     CONFERENCE_ID,
+    CONFERENCE_NAME,
+    CONFERENCE_START_DATE,
     COUPON_PREFIX,
     MIN_STORY_LENGTH,
-    OPENAI_MAX_TOKENS,
-    OPENAI_MODEL,
 )
 
 load_dotenv()
@@ -34,7 +38,7 @@ load_dotenv()
 SEED_PHRASE = os.getenv("AGENT_SEED_PHRASE", "donut-agent-seed-phrase")
 AGENTVERSE_KEY = os.getenv("ILABS_AGENTVERSE_API_KEY")
 
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+ASI_ONE_API_KEY = os.getenv("ASI_ONE_API_KEY")
 
 # --- Agent ---
 agent = Agent(
@@ -50,15 +54,16 @@ protocol = Protocol(spec=chat_protocol_spec)
 # --- Helpers ---
 
 WELCOME_MESSAGE = (
-    "Welcome to Fetch-a-Donut! I'm your friendly donut fairy!\n\n"
-    "Before I can grant you a magical donut coupon, I need to hear your "
-    "most epic donut story! Tell me about:\n\n"
-    "- Your craziest donut adventure\n"
-    "- Your dream donut combination\n"
-    "- A time a donut saved your day\n"
-    "- Or any donut-related tale!\n\n"
-    "The more creative and fun your story, the better your rating! "
-    "Go ahead, share your story now."
+    f"Welcome to Fetch-a-Donut at {CONFERENCE_NAME}! "
+    f"I'm your friendly donut fairy!\n\n"
+    f"Before I can grant you a magical donut coupon, I need to hear your "
+    f"most epic donut story! Tell me about:\n\n"
+    f"- Your craziest donut adventure\n"
+    f"- Your dream donut combination\n"
+    f"- A time a donut saved your day\n"
+    f"- Or any donut-related tale!\n\n"
+    f"The more creative and fun your story, the better your rating! "
+    f"Go ahead, share your story now."
 )
 
 
@@ -80,11 +85,15 @@ def _generate_coupon(sender: str) -> str:
 
 
 def _evaluate_story(story: str) -> dict:
-    """Use OpenAI to evaluate the donut story. Returns {"score": int, "comment": str}."""
+    """Use ASI:One mini to evaluate the donut story. Returns {"score": int, "comment": str}."""
     try:
-        response = openai_client.chat.completions.create(
-            model=OPENAI_MODEL,
-            messages=[
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {ASI_ONE_API_KEY}",
+        }
+        data = {
+            "model": ASI_ONE_MODEL,
+            "messages": [
                 {
                     "role": "system",
                     "content": (
@@ -96,10 +105,16 @@ def _evaluate_story(story: str) -> dict:
                 },
                 {"role": "user", "content": story},
             ],
-            max_tokens=OPENAI_MAX_TOKENS,
-            temperature=0.7,
+            "max_tokens": ASI_ONE_MAX_TOKENS,
+        }
+        resp = requests.post(
+            f"{ASI_ONE_BASE_URL}/chat/completions",
+            headers=headers,
+            json=data,
+            timeout=30,
         )
-        raw = response.choices[0].message.content.strip()
+        resp.raise_for_status()
+        raw = resp.json()["choices"][0]["message"]["content"].strip()
         # Strip markdown code fences if present
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
@@ -144,7 +159,7 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
             _make_chat(
                 f"You've already received your donut coupon this session!\n\n"
                 f"Your coupon code: {coupon}\n\n"
-                f"Show this code to any food vendor to claim your free donut.",
+                f"Show this code to any food vendor at {CONFERENCE_NAME} to claim your free donut.",
                 end_session=True,
             ),
         )
@@ -163,7 +178,7 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
             )
             return
 
-        # Evaluate story with OpenAI
+        # Evaluate story with ASI:One
         ctx.logger.info(f"Evaluating donut story from {sender[:16]}...")
         result = _evaluate_story(text)
         score = result.get("score", 7)
@@ -184,7 +199,8 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
                 f"{comment}\n\n"
                 f"Your Coupon Code: {coupon}\n\n"
                 f"This gets you a FREE donut of your choice!\n"
-                f"Show this code to any food vendor at the conference.\n"
+                f"Show this code to any food vendor at {CONFERENCE_NAME} "
+                f"({CONFERENCE_START_DATE} - {CONFERENCE_END_DATE}).\n"
                 f"Story Rating: {score}/10",
                 end_session=True,
             ),
@@ -221,7 +237,7 @@ A fun, interactive agent that distributes donut coupons through story-based enga
 
 ## Features
 
-- AI-powered story evaluation using OpenAI
+- AI-powered story evaluation using ASI:One
 - Unique coupon code generation
 - One coupon per session (anti-abuse)
 - Chat protocol support for asi:one
