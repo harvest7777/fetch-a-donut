@@ -1,0 +1,5 @@
+User clicks URL → Redirected to the Fetch-a-Donut agent on asi:one
+Agent sends prebuilt prompt: "Hi Welcome to TreeHacks 12.0! I'm Fetch-a-Donut agent. What is your favorite donut?"
+User tells the agent their favorite donut
+Agent (using asi:1 LLM) responds with a fun message: "Here is your ticket and your donut, enjoy!"
+Agent gives user a unique ticket code

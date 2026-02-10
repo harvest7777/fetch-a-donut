@@ -1,5 +1,4 @@
 import hashlib
-import json
 import os
 from datetime import datetime, UTC
 from uuid import uuid4
@@ -24,12 +23,9 @@ from config import (
     ASI_ONE_BASE_URL,
     ASI_ONE_MAX_TOKENS,
     ASI_ONE_MODEL,
-    CONFERENCE_END_DATE,
     CONFERENCE_ID,
     CONFERENCE_NAME,
-    CONFERENCE_START_DATE,
     COUPON_PREFIX,
-    MIN_STORY_LENGTH,
 )
 
 load_dotenv()
@@ -54,16 +50,9 @@ protocol = Protocol(spec=chat_protocol_spec)
 # --- Helpers ---
 
 WELCOME_MESSAGE = (
-    f"Welcome to Fetch-a-Donut at {CONFERENCE_NAME}! "
-    f"I'm your friendly donut fairy!\n\n"
-    f"Before I can grant you a magical donut coupon, I need to hear your "
-    f"most epic donut story! Tell me about:\n\n"
-    f"- Your craziest donut adventure\n"
-    f"- Your dream donut combination\n"
-    f"- A time a donut saved your day\n"
-    f"- Or any donut-related tale!\n\n"
-    f"The more creative and fun your story, the better your rating! "
-    f"Go ahead, share your story now."
+    f"Hi Welcome to {CONFERENCE_NAME}!\n"
+    f"I'm Fetch-a-Donut agent\n\n"
+    f"What is your favorite donut?"
 )
 
 
@@ -84,8 +73,8 @@ def _generate_coupon(sender: str) -> str:
     return f"{COUPON_PREFIX}-{CONFERENCE_ID}-{user_hash}-{ts}"
 
 
-def _evaluate_story(story: str) -> dict:
-    """Use ASI:One mini to evaluate the donut story. Returns {"score": int, "comment": str}."""
+def _generate_donut_response(favorite_donut: str) -> str:
+    """Use ASI:One to generate a fun response about the user's favorite donut and give them their ticket."""
     try:
         headers = {
             "Content-Type": "application/json",
@@ -97,13 +86,14 @@ def _evaluate_story(story: str) -> dict:
                 {
                     "role": "system",
                     "content": (
-                        "You are a fun, enthusiastic donut story judge. "
-                        "The user will share a donut-related story. "
-                        "Rate it from 1 to 10 and give a short, encouraging comment. "
-                        'Respond ONLY with valid JSON: {"score": <int>, "comment": "<string>"}'
+                        f"You are the Fetch-a-Donut agent at {CONFERENCE_NAME}. "
+                        "The user just told you their favorite donut. "
+                        "Respond in a fun, enthusiastic way acknowledging their favorite donut choice. "
+                        "Then tell them: here is your ticket and your donut, enjoy! "
+                        "Keep the response short and cheerful (2-3 sentences max)."
                     ),
                 },
-                {"role": "user", "content": story},
+                {"role": "user", "content": f"My favorite donut is {favorite_donut}"},
             ],
             "max_tokens": ASI_ONE_MAX_TOKENS,
         }
@@ -114,13 +104,12 @@ def _evaluate_story(story: str) -> dict:
             timeout=30,
         )
         resp.raise_for_status()
-        raw = resp.json()["choices"][0]["message"]["content"].strip()
-        # Strip markdown code fences if present
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-        return json.loads(raw)
+        return resp.json()["choices"][0]["message"]["content"].strip()
     except Exception:
-        return {"score": 7, "comment": "Great story! Thanks for sharing."}
+        return (
+            f"Great choice! {favorite_donut} is an amazing donut! "
+            f"Here is your ticket and your donut, enjoy!"
+        )
 
 
 def _session_key(ctx: Context) -> str:
@@ -151,41 +140,29 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
     # Load session state
     session_data = ctx.storage.get(_session_key(ctx))
 
-    # State: already received a coupon this session
+    # State: already received their donut this session
     if session_data and session_data.get("state") == "completed":
         coupon = session_data.get("coupon", "N/A")
         await ctx.send(
             sender,
             _make_chat(
-                f"You've already received your donut coupon this session!\n\n"
-                f"Your coupon code: {coupon}\n\n"
-                f"Show this code to any food vendor at {CONFERENCE_NAME} to claim your free donut.",
+                f"You've already received your donut ticket!\n\n"
+                f"Your ticket code: {coupon}\n\n"
+                f"Enjoy your donut at {CONFERENCE_NAME}!",
                 end_session=True,
             ),
         )
         return
 
-    # State: awaiting a story
-    if session_data and session_data.get("state") == "awaiting_story":
-        # Validate story length
-        if len(text) < MIN_STORY_LENGTH:
-            await ctx.send(
-                sender,
-                _make_chat(
-                    f"That's a bit short! Tell me a real donut story "
-                    f"(at least {MIN_STORY_LENGTH} characters). I'm all ears!"
-                ),
-            )
-            return
-
-        # Evaluate story with ASI:One
-        ctx.logger.info(f"Evaluating donut story from {sender[:16]}...")
-        result = _evaluate_story(text)
-        score = result.get("score", 7)
-        comment = result.get("comment", "Nice story!")
+    # State: awaiting favorite donut answer
+    if session_data and session_data.get("state") == "awaiting_donut":
+        ctx.logger.info(f"Generating donut response for {sender[:16]}...")
 
         # Generate coupon
         coupon = _generate_coupon(sender)
+
+        # Use ASI:One to generate a fun response
+        llm_response = _generate_donut_response(text)
 
         # Save completed state
         ctx.storage.set(
@@ -196,19 +173,16 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
         await ctx.send(
             sender,
             _make_chat(
-                f"{comment}\n\n"
-                f"Your Coupon Code: {coupon}\n\n"
-                f"This gets you a FREE donut of your choice!\n"
-                f"Show this code to any food vendor at {CONFERENCE_NAME} "
-                f"({CONFERENCE_START_DATE} - {CONFERENCE_END_DATE}).\n"
-                f"Story Rating: {score}/10",
+                f"{llm_response}\n\n"
+                f"Your Ticket Code: {coupon}\n\n"
+                f"Enjoy {CONFERENCE_NAME}!",
                 end_session=True,
             ),
         )
         return
 
-    # State: new conversation — send welcome and ask for story
-    ctx.storage.set(_session_key(ctx), {"state": "awaiting_story"})
+    # State: new conversation — send welcome and ask for favorite donut
+    ctx.storage.set(_session_key(ctx), {"state": "awaiting_donut"})
 
     await ctx.send(sender, _make_chat(WELCOME_MESSAGE))
 
@@ -227,20 +201,20 @@ README = """# Fetch-a-Donut Agent
 ![tag:donut-agent](https://img.shields.io/badge/donut-3D8BD3)
 ![tag:innovationlab](https://img.shields.io/badge/innovationlab-3D8BD3)
 
-A fun, interactive agent that distributes donut coupons through story-based engagement.
+A fun, interactive agent that gives you a donut ticket at TreeHacks 12!
 
 ## How It Works
 
-1. Message the agent asking for a donut
-2. Share your best donut story
-3. Get a rated coupon code for a free donut!
+1. Click the URL to chat with the agent
+2. Tell the agent your favorite donut
+3. Get your ticket and donut, enjoy!
 
 ## Features
 
-- AI-powered story evaluation using ASI:One
-- Unique coupon code generation
-- One coupon per session (anti-abuse)
-- Chat protocol support for asi:one
+- AI-powered fun responses using ASI:One
+- Unique ticket code generation
+- One ticket per session
+- Direct URL access via asi:one
 """
 
 
@@ -260,8 +234,8 @@ async def startup_handler(ctx: Context):
                 ),
                 readme=README,
                 description=(
-                    "A fun donut coupon agent! Share a donut story and "
-                    "receive a free donut coupon code."
+                    "Fetch-a-Donut agent for TreeHacks 12! "
+                    "Tell me your favorite donut and get your ticket!"
                 ),
             )
             ctx.logger.info("Registered with Agentverse")
