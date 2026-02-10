@@ -1,0 +1,12 @@
+
+https://asi1.ai/chat_v2?skip_onboarding=true&search=%40stanfordwics2026+book+me+a+ticket&action=login 
+
+Here is a example link for how it would work
+
+The user clicks the link--> saying fetch-a-donut 
+
+
+
+and the agent will give a pre build response back to the user
+
+the name of the agent is called fetch-a-donut-2026
