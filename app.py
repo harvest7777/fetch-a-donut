@@ -115,8 +115,8 @@ def _generate_donut_response(favorite_donut: str) -> str:
         )
 
 
-def _sender_key(sender: str) -> str:
-    return f"claimed_{sender}"
+def _session_key(ctx: Context) -> str:
+    return f"session_{ctx.session}"
 
 
 # --- Handlers ---
@@ -140,23 +140,26 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
 
     text = text.strip()
 
-    # Check if this sender has already claimed a donut
-    claimed = ctx.storage.get(_sender_key(sender))
-    if claimed and claimed.get("state") == "completed":
-        coupon = claimed.get("coupon", "N/A")
+    # Load session state
+    session_data = ctx.storage.get(_session_key(ctx))
+
+    # State: already received their donut this session
+    if session_data and session_data.get("state") == "completed":
+        coupon = session_data.get("coupon", "N/A")
         await ctx.send(
             sender,
             _make_chat(
-                f"You've already ordered your donut!\n\n"
+                f"You've already received your donut ticket!\n\n"
                 f"Your ticket code: {coupon}\n\n"
-                f"Catch us again at the next event!",
+                f"Enjoy your donut at {CONFERENCE_NAME}!\n\n"
+                f"Thank you for using Fetch-a-Donut and ASI:One!",
                 end_session=True,
             ),
         )
         return
 
     # State: awaiting favorite donut answer
-    if claimed and claimed.get("state") == "awaiting_donut":
+    if session_data and session_data.get("state") == "awaiting_donut":
         ctx.logger.info(f"Generating donut response for {sender[:16]}...")
 
         # Generate coupon
@@ -165,9 +168,9 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
         # Use ASI:One to generate a fun response
         llm_response = _generate_donut_response(text)
 
-        # Save completed state keyed to sender
+        # Save completed state
         ctx.storage.set(
-            _sender_key(sender),
+            _session_key(ctx),
             {"state": "completed", "coupon": coupon},
         )
 
@@ -184,7 +187,7 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
         return
 
     # State: new conversation — send welcome and ask for favorite donut
-    ctx.storage.set(_sender_key(sender), {"state": "awaiting_donut"})
+    ctx.storage.set(_session_key(ctx), {"state": "awaiting_donut"})
 
     await ctx.send(sender, _make_chat(WELCOME_MESSAGE))
 
