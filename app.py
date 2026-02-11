@@ -132,7 +132,6 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
         ),
     )
 
-
     # Extract text from message
     text = ""
     for item in msg.content:
@@ -142,15 +141,13 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
     text = text.strip()
 
     # Check if this sender has already claimed a donut
-    # claimed = ctx.storage.get(_sender_key(sender))
-    # Hardcode for now bc ASI:One is bugged
-    claimed = False
+    claimed = ctx.storage.get(_sender_key(sender))
     if claimed and claimed.get("state") == "completed":
         coupon = claimed.get("coupon", "N/A")
         await ctx.send(
             sender,
             _make_chat(
-                f"You've already Fetched 🤖 your donut!\n\n"
+                f"You've already ordered your donut!\n\n"
                 f"Your ticket code: {coupon}\n\n"
                 f"Catch us again at the next event!",
                 end_session=True,
