@@ -26,7 +26,7 @@ cp .env.example .env
 | Variable | Description | Default |
 |---|---|---|
 | `ASI_ONE_API_KEY` | ASI:One API key | — |
-| `AGENT_SEED_PHRASE` | Agent seed phrase | `donut-agent-seed-phrase` |
+| `AGENT_SEED_PHRASE` | Agent seed phrase | — |
 | `ILABS_AGENTVERSE_API_KEY` | Agentverse API key | — |
 | `AGENT_PORT` | Port the agent listens on | `8056` |
 

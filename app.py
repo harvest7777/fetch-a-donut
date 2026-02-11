@@ -31,7 +31,7 @@ from config import (
 load_dotenv()
 
 # --- Clients ---
-SEED_PHRASE = os.getenv("AGENT_SEED_PHRASE", "donut-agent-seed-phrase")
+SEED_PHRASE = os.getenv("AGENT_SEED_PHRASE", "your-agent-seed-phrase")
 AGENTVERSE_KEY = os.getenv("ILABS_AGENTVERSE_API_KEY")
 
 ASI_ONE_API_KEY = os.getenv("ASI_ONE_API_KEY")
