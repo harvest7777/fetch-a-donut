@@ -43,6 +43,7 @@ agent = Agent(
     port=8001,
     mailbox=True,
     handle_messages_concurrently=True,
+    network="testnet"
 )
 
 protocol = Protocol(spec=chat_protocol_spec)
@@ -90,6 +91,7 @@ def _generate_donut_response(favorite_donut: str) -> str:
                         "The user just told you their favorite donut. "
                         "Respond in a fun, enthusiastic way acknowledging their favorite donut choice. "
                         "Then tell them: here is your ticket and your donut, enjoy! "
+                        "Thank them for using Fetch-a-Donut and ASI:One. "
                         "Keep the response short and cheerful (2-3 sentences max)."
                     ),
                 },
@@ -108,7 +110,8 @@ def _generate_donut_response(favorite_donut: str) -> str:
     except Exception:
         return (
             f"Great choice! {favorite_donut} is an amazing donut! "
-            f"Here is your ticket and your donut, enjoy!"
+            f"Here is your ticket and your donut, enjoy! "
+            f"Thank you for using Fetch-a-Donut and ASI:One!"
         )
 
 
@@ -148,7 +151,8 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
             _make_chat(
                 f"You've already received your donut ticket!\n\n"
                 f"Your ticket code: {coupon}\n\n"
-                f"Enjoy your donut at {CONFERENCE_NAME}!",
+                f"Enjoy your donut at {CONFERENCE_NAME}!\n\n"
+                f"Thank you for using Fetch-a-Donut and ASI:One!",
                 end_session=True,
             ),
         )
@@ -175,7 +179,8 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
             _make_chat(
                 f"{llm_response}\n\n"
                 f"Your Ticket Code: {coupon}\n\n"
-                f"Enjoy {CONFERENCE_NAME}!",
+                f"Enjoy {CONFERENCE_NAME}!\n\n"
+                f"Thank you for using Fetch-a-Donut and ASI:One!",
                 end_session=True,
             ),
         )
