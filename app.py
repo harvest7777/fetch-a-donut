@@ -115,8 +115,8 @@ def _generate_donut_response(favorite_donut: str) -> str:
         )
 
 
-def _session_key(ctx: Context) -> str:
-    return f"session_{ctx.session}"
+def _sender_key(sender: str) -> str:
+    return f"sender_{sender}"
 
 
 # --- Handlers ---
@@ -141,7 +141,7 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
     text = text.strip()
 
     # Load session state
-    session_data = ctx.storage.get(_session_key(ctx))
+    session_data = ctx.storage.get(_sender_key(sender))
 
     # State: already received their donut this session
     if session_data and session_data.get("state") == "completed":
@@ -170,7 +170,7 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
 
         # Save completed state
         ctx.storage.set(
-            _session_key(ctx),
+            _sender_key(sender),
             {"state": "completed", "coupon": coupon},
         )
 
@@ -187,7 +187,7 @@ async def handle_message(ctx: Context, sender: str, msg: ChatMessage):
         return
 
     # State: new conversation — send welcome and ask for favorite donut
-    ctx.storage.set(_session_key(ctx), {"state": "awaiting_donut"})
+    ctx.storage.set(_sender_key(sender), {"state": "awaiting_donut"})
 
     await ctx.send(sender, _make_chat(WELCOME_MESSAGE))
 
