@@ -2,3 +2,7 @@
 __pycache__/
 venv/
 *.pyc
+
+# Agent runtime files
+agent*_data.json
+uagents_core.log
